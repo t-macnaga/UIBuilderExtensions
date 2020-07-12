@@ -13,11 +13,28 @@ public class CodeGenDescription
     public string CallbackMethodName; // TypeがChangeEvent<string>だと文字列がそうならないから 
     public string DisplayEventTypeName;
     public string EventTypeName;
-    public CodeGenDescription(System.Type type)
+    public CodeGenDescription(VisualElement element)
+    {
+        if (element is Button)
+        {
+            Type = typeof(Button);
+            CallbackMethodName = $"OnClick_{element.name}";
+            DisplayEventTypeName = "OnClick";
+        }
+        else if (element is INotifyValueChanged<string>)
+        {
+            CallbackMethodName = $"OnValueChanged_{element.name}";
+            DisplayEventTypeName = "OnValueChanged";
+            EventTypeName = "ChangeEvent<string>";
+        }
+    }
+
+    public CodeGenDescription(System.Type type, string elementName)
     {
         Type = type;
-        CallbackMethodName = "On" + type.Name;
+        CallbackMethodName = $"On{type.Name}_{elementName}";
         DisplayEventTypeName = type.Name;
+        EventTypeName = type.Name;
     }
 }
 
@@ -122,28 +139,13 @@ public class UIEventBuilderInspector : EditorWindow
         var types = new List<CodeGenDescription>();
         if (e is Button)
         {
-            types = new List<CodeGenDescription>
-            {
-                new CodeGenDescription(typeof(Button))
-                {
-                    CallbackMethodName = $"OnClick_{e.name}",
-                    DisplayEventTypeName="OnClick"
-                }
-            };
+            types = new List<CodeGenDescription> { new CodeGenDescription(e) };
         }
         else if (e is INotifyValueChanged<string>)
         {
             Debug.Log("string value changed.");
             // types = TypeCache.GetTypesDerivedFrom<INotifyValueChanged<string>>();
-            types = new List<CodeGenDescription>
-            {
-                new CodeGenDescription(typeof(ChangeEvent<string>))
-                {
-                    CallbackMethodName=$"OnValueChanged_{e.name}",
-                    DisplayEventTypeName = "OnValueChanged",
-                    EventTypeName = "ChangeEvent<string>"
-                }
-            };
+            types = new List<CodeGenDescription> { new CodeGenDescription(e) };
         }
         else if (e is INotifyValueChanged<bool>)
         {
@@ -154,13 +156,21 @@ public class UIEventBuilderInspector : EditorWindow
             //     nameof(ChangeEvent<bool>)// "ChangeEvent<string>"
             // };
         }
-        else
-        {
-            types = TypeCache.GetTypesDerivedFrom<EventBase>()
+        // else
+        // {
+        //     types = TypeCache.GetTypesDerivedFrom<EventBase>()
+        //     .Where(x => !x.IsAbstract)
+        //     .Select(x => new CodeGenDescription(x))// Type = x, EventTypeName = x.Name })
+        //     .OrderBy(x => x.Type.Name)
+        //     .ToList();
+        // }
+        foreach (var type in
+            TypeCache.GetTypesDerivedFrom<EventBase>()
             .Where(x => !x.IsAbstract)
-            .Select(x => new CodeGenDescription(x))// Type = x, EventTypeName = x.Name })
-            .OrderBy(x => x.Type.Name)
-            .ToList();
+            .Select(x => new CodeGenDescription(x, e.name))
+            .OrderBy(x => x.Type.Name))
+        {
+            types.Add(type);
         }
         foreach (var type in types)
         {
@@ -216,7 +226,7 @@ public class UIEventBuilderInspector : EditorWindow
         var stubCode = string.Empty;
         if (desc.Type == typeof(Button))
         {
-            stubCode = EditorWindowCodeGen.GetRegisterClickedCode(currentSelection.name);
+            stubCode = EditorWindowCodeGen.GetRegisterClickedCode(currentSelection.name, desc.CallbackMethodName);
         }
         else
         {

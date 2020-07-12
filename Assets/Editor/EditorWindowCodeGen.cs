@@ -87,9 +87,9 @@ public static class EditorWindowCodeGen
         return sb.ToString();
     }
 
-    public static string GetRegisterClickedCode(string visualElementName)
+    public static string GetRegisterClickedCode(string visualElementName, string callbackName)
     {
-        return $"    rootVisualElement.Q<Button>(\"{visualElementName}\").clicked += OnClick_{visualElementName};";
+        return $"    rootVisualElement.Q<Button>(\"{visualElementName}\").clicked += {callbackName};";
     }
 
     public static string GetRegisterCallbackCode(CodeGenDescription desc, string visualElementName)

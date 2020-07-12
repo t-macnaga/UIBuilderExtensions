@@ -9,8 +9,8 @@ public partial class Sample
     protected override string TreeAssetPath => "Assets/Editor/Sample.uxml";
     protected override void RegisterCallbacks()
     {
-        rootVisualElement.Q<Button>("button2").clicked += OnClick_button2;
-        rootVisualElement.Q<VisualElement>("textField").RegisterCallback<ChangeEvent<string>>(OnValueChanged_textField);
         rootVisualElement.Q<Button>("button1").clicked += OnClick_button1;
+        rootVisualElement.Q<VisualElement>("button1").RegisterCallback<AttachToPanelEvent>(OnAttachToPanelEvent_button1);
+        rootVisualElement.Q<VisualElement>("button1").RegisterCallback<MouseUpEvent>(OnMouseUpEvent_button1);
     }
 }

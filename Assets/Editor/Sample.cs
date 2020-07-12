@@ -16,21 +16,21 @@ public partial class Sample : EditorWindowBase
         InitializeComponents();
     }
 
-    void OnClick_button2()
-    {
-        Debug.Log("button2 Clicked");
-    }
-
-
-    void OnValueChanged_textField(ChangeEvent<string> evt)
-    {
-        Debug.Log("On ChangeEvent<string>");
-    }
-
-
     void OnClick_button1()
     {
         Debug.Log("button1 Clicked");
+    }
+
+
+    void OnAttachToPanelEvent_button1(AttachToPanelEvent evt)
+    {
+        Debug.Log("On AttachToPanelEvent");
+    }
+
+
+    void OnMouseUpEvent_button1(MouseUpEvent evt)
+    {
+        Debug.Log("On MouseUpEvent");
     }
 
 }
