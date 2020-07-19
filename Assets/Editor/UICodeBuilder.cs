@@ -38,7 +38,7 @@ public class CodeGenDescription
     }
 }
 
-public class UIEventBuilderInspector : EditorWindow
+public class UICodeBuilder : EditorWindow
 {
     VisualTreeAsset treeAsset;
     ObjectField treeAssetField;
@@ -51,10 +51,10 @@ public class UIEventBuilderInspector : EditorWindow
     string ClassName => treeAssetField.value.name;
     string Path => AssetDatabase.GetAssetPath(treeAssetField.value);
 
-    [MenuItem("Window/UI/UI Event Builder Inspector")]
+    [MenuItem("Window/UI/UI Code Builder")]
     static void Init()
     {
-        GetWindow<UIEventBuilderInspector>();
+        GetWindow<UICodeBuilder>();
     }
 
     void OnEnable()
@@ -76,6 +76,27 @@ public class UIEventBuilderInspector : EditorWindow
         rightPane.style.height = Screen.height;
         rootPane.Add(leftPane);
         rootPane.Add(rightPane);
+    }
+
+    [UnityEditor.Callbacks.OnOpenAsset(0)]
+    public static bool OnOpenAsset(int instanceID, int line)
+    {
+        var asset = EditorUtility.InstanceIDToObject(instanceID) as VisualTreeAsset;
+        if (asset == null)
+            return false;
+
+        // Already open uxml document will be opened by the default editor.
+        // var builderWindow = ActiveWindow;
+        // if (builderWindow != null)
+        // {
+        //     if (builderWindow.document.visualTreeAsset == asset)
+        //         return false;
+        // }
+
+        // var builder = ShowWindow();
+        // builder.LoadDocument(asset);
+
+        return true;
     }
 
     void OnDisable()
