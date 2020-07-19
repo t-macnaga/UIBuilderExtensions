@@ -128,12 +128,4 @@ public static class EditorWindowCodeGen
         sb.AppendLine("}");
         return sb.ToString();
     }
-
-    public static void OpenFileOnSpecificLineAndColumn(string filePath, int line, int column)
-    {
-        Assembly.GetAssembly(typeof(EditorApplication))
-        .GetType("UnityEditor.LogEntries")
-        .GetMethod(nameof(OpenFileOnSpecificLineAndColumn), BindingFlags.Static | BindingFlags.Public)
-        .Invoke(null, new object[] { filePath, line, column });
-    }
 }

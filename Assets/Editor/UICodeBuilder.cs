@@ -1,55 +1,17 @@
 ﻿using UnityEngine;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine.UIElements;
-using System.Reflection;
-using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 
-public class CodeGenDescription
-{
-    public System.Type Type;
-    public string CallbackMethodName; // TypeがChangeEvent<string>だと文字列がそうならないから 
-    public string DisplayEventTypeName;
-    public string EventTypeName;
-    public CodeGenDescription(VisualElement element)
-    {
-        if (element is Button)
-        {
-            Type = typeof(Button);
-            CallbackMethodName = $"OnClick_{element.name}";
-            DisplayEventTypeName = "OnClick";
-        }
-        else if (element is INotifyValueChanged<string>)
-        {
-            CallbackMethodName = $"OnValueChanged_{element.name}";
-            DisplayEventTypeName = "OnValueChanged";
-            EventTypeName = "ChangeEvent<string>";
-        }
-    }
-
-    public CodeGenDescription(System.Type type, string elementName)
-    {
-        Type = type;
-        CallbackMethodName = $"On{type.Name}_{elementName}";
-        DisplayEventTypeName = type.Name;
-        EventTypeName = type.Name;
-    }
-}
-
 public class UICodeBuilder : EditorWindow
 {
-    VisualTreeAsset treeAsset;
-    ObjectField treeAssetField;
-    VisualElement container;
-    VisualElement leftPane;
-    VisualElement rightPane;
-    VisualElement currentSelection;
     EditorWindowCodeBuilder editorWindowCodeBuilder;
     ScrollView scrollView;
-    string ClassName => treeAssetField.value.name;
-    string Path => AssetDatabase.GetAssetPath(treeAssetField.value);
+    BuilderWindowInternal internalBuilder;
+    string ClassName => internalBuilder.TreeAsset.name;
+    string Path => AssetDatabase.GetAssetPath(internalBuilder.TreeAsset);
+    VisualElement CurrentSelection => internalBuilder.CurrentSelection;
 
     [MenuItem("Window/UI/UI Code Builder")]
     static void Init()
@@ -59,92 +21,14 @@ public class UICodeBuilder : EditorWindow
 
     void OnEnable()
     {
-        Selection.selectionChanged += SelectionChange;
-        treeAssetField = new ObjectField("uxml");
-        treeAssetField.objectType = typeof(VisualTreeAsset);
-        rootVisualElement.Add(treeAssetField);
-
-        var rootPane = new VisualElement();
-        rootPane.style.flexDirection = FlexDirection.Row;
-        rootVisualElement.Add(rootPane);
-
-        leftPane = new VisualElement();
-        leftPane.style.width = Screen.width / 2;
-        leftPane.style.height = Screen.height;
-        rightPane = new VisualElement();
-        rightPane.style.width = Screen.width / 2;
-        rightPane.style.height = Screen.height;
-        rootPane.Add(leftPane);
-        rootPane.Add(rightPane);
-    }
-
-    [UnityEditor.Callbacks.OnOpenAsset(0)]
-    public static bool OnOpenAsset(int instanceID, int line)
-    {
-        var asset = EditorUtility.InstanceIDToObject(instanceID) as VisualTreeAsset;
-        if (asset == null)
-            return false;
-
-        // Already open uxml document will be opened by the default editor.
-        // var builderWindow = ActiveWindow;
-        // if (builderWindow != null)
-        // {
-        //     if (builderWindow.document.visualTreeAsset == asset)
-        //         return false;
-        // }
-
-        // var builder = ShowWindow();
-        // builder.LoadDocument(asset);
-
-        return true;
-    }
-
-    void OnDisable()
-    {
-        Selection.selectionChanged -= SelectionChange;
-    }
-
-    void SelectionChange()
-    {
-        if (Selection.activeObject is VisualTreeAsset treeAsset)
-        {
-            treeAssetField.value = treeAsset;
-            editorWindowCodeBuilder = new EditorWindowCodeBuilder(Path);
-            BuildTree();
-        }
-    }
-
-    void BuildTree()
-    {
-        if (container != null)
-        {
-            leftPane.Remove(container);
-        }
-        container = (treeAssetField.value as VisualTreeAsset).CloneTree();
-        container.Query<VisualElement>().Where(x => x.enabledInHierarchy).ForEach(e =>
-        {
-            if (e is Button)
-            {
-                e.RegisterCallback<MouseUpEvent>(evt =>
-                {
-                    OnSelectVisualElement(e);
-                });
-            }
-            else
-            {
-                e.RegisterCallback<MouseDownEvent>(evt =>
-                {
-                    OnSelectVisualElement(e);
-                });
-            }
-        });
-        // container.Query<Button>().ForEach(button => AddContextualMenu(button));
-        leftPane.Add(container);
+        internalBuilder = new BuilderWindowInternal();
+        internalBuilder.OnSelectionChanged = OnSelectVisualElement;
+        rootVisualElement.schedule.Execute(_ => internalBuilder.Update()).Every(1000);
     }
 
     void OnSelectVisualElement(VisualElement e)
     {
-        currentSelection = e;
+        editorWindowCodeBuilder = new EditorWindowCodeBuilder(Path);
         BuildEventView(e);
     }
 
@@ -154,9 +38,10 @@ public class UICodeBuilder : EditorWindow
         {
             scrollView = new ScrollView();
         }
-        scrollView.SetEnabled(!string.IsNullOrEmpty(e.name));
-
         scrollView.Clear();
+        if (e == null) { return; }
+
+        scrollView.SetEnabled(!string.IsNullOrEmpty(e.name));
         var types = new List<CodeGenDescription>();
         if (e is Button)
         {
@@ -209,19 +94,8 @@ public class UICodeBuilder : EditorWindow
             field.AddManipulator(doubleClickManipulator);
             scrollView.Add(field);
         }
-        rightPane.Add(scrollView);
+        rootVisualElement.Add(scrollView);
     }
-
-    // void AddContextualMenu(Button button)
-    // {
-    // button.AddManipulator(new ContextualMenuManipulator(evt =>
-    // {
-    //     evt.menu.AppendAction(
-    //         actionName: "MenuAction",
-    //         action: (a) => Debug.Log(""),
-    //         actionStatusCallback: (a) => DropdownMenuAction.Status.Normal);
-    // }));
-    // }
 
     void SaveWindowScript(string assetPath, string script)
     {
@@ -247,11 +121,11 @@ public class UICodeBuilder : EditorWindow
         var stubCode = string.Empty;
         if (desc.Type == typeof(Button))
         {
-            stubCode = EditorWindowCodeGen.GetRegisterClickedCode(currentSelection.name, desc.CallbackMethodName);
+            stubCode = EditorWindowCodeGen.GetRegisterClickedCode(CurrentSelection.name, desc.CallbackMethodName);
         }
         else
         {
-            stubCode = EditorWindowCodeGen.GetRegisterCallbackCode(desc, currentSelection.name);
+            stubCode = EditorWindowCodeGen.GetRegisterCallbackCode(desc, CurrentSelection.name);
         }
         if (!registerWindowScript.text.Contains(stubCode))
         {
@@ -260,6 +134,6 @@ public class UICodeBuilder : EditorWindow
             SaveWindowScript(windowRegisterFilePath, script);
         }
 
-        editorWindowCodeBuilder.StubCode(desc, currentSelection);
+        editorWindowCodeBuilder.StubCode(desc, CurrentSelection);
     }
 }

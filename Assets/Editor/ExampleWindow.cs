@@ -13,56 +13,23 @@ public partial class ExampleWindow : EditorWindow
 
     void OnEnable()
     {
-        var scrollView = new ScrollView();
-        scrollView.Add(new Label("IMouseEvent"));
+        var container = new VisualElement();
+        container.style.flexDirection = FlexDirection.Row;
+        var button1 = new Button(() => Debug.Log("button1"))
+        { name = "button1", text = "button1" };
+        var button2 = new Button(() => Debug.Log("button2"))
+        { name = "button2", text = "button2" };
 
-        foreach (var type in TypeCache.GetTypesDerivedFrom<IMouseEvent>())
-        {
-            if (type.IsAbstract) { continue; }
-            var hor = new VisualElement
-            {
+        container.Add(button1);
+        container.Add(button2);
+        rootVisualElement.Add(container);
+    }
 
-            };
-            // Debug.Log($"IMouse:{type.Name}");
-            var field = new TextField(type.Name);
-            scrollView.Add(field);
-        }
-        // new PopupField<string>().RegisterValueChangedCallback(x=>{});
-        scrollView.Add(new Label("EventBase"));
-        foreach (var type in TypeCache.GetTypesDerivedFrom<EventBase>())
-        {
-            if (type.IsAbstract) { continue; }
-            // Debug.Log($"IMouse:{type.Name}");
-            var field = new TextField(type.Name);
-            field.RegisterCallback<ChangeEvent<string>>(x => { Debug.Log($"Changed value to:{x.newValue}"); });
-            var doubleClickManipulator = new MouseDoubleClickManipulator()
-            .RegisterDoubleClick(() => Debug.Log($"Double Button Clicked."));
-            field.AddManipulator(doubleClickManipulator);
-            scrollView.Add(field);
-        }
-        // scrollView.Add(new Label("INotifyValueChanged"));
-        // foreach (var type in TypeCache.GetTypesDerivedFrom<INotifyValueChanged<string>>())
-        // {
-        //     if (type.IsAbstract) { continue; }
-        //     // Debug.Log($"IMouse:{type.Name}");
-        //     var field = new TextField(type.Name);
-        //     scrollView.Add(field);
-        // }
-
-
-        rootVisualElement.Add(scrollView);
-
-        // button1 = rootVisualElement.Q<Button>();
-        // var ve = new VisualElement();
-        var ve = new IMGUIContainer(() =>
-        {
-            EditorGUILayout.LabelField("ONGUI");
-        });
-        ve.style.backgroundColor = Color.red;
-        ve.style.width = 100;
-        ve.style.height = 50;
-        // var ve = rootVisualElement.Q();
-        rootVisualElement.Add(ve);
+    void ShowWarning()
+    {
+        var content = new GUIContent(string.Empty, EditorGUIUtility.FindTexture("console.warnicon"));
+        content.text = "Message";
+        ShowNotification(content, fadeoutWait: 5);
     }
 }
 

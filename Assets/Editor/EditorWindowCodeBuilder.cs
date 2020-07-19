@@ -79,7 +79,7 @@ public class EditorWindowCodeBuilder
 
         var script = sb.ToString();
         SaveWindowScript(assetPath, script);
-        EditorWindowCodeGen.OpenFileOnSpecificLineAndColumn(ioPath, line, 0);
+        InternalUtility.OpenFileOnSpecificLineAndColumn(ioPath, line, 0);
     }
 
     void SaveWindowScript(string assetPath, string script)
