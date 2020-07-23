@@ -18,7 +18,7 @@ public static class InternalUtility
 
 internal class BuilderWindowInternal
 {
-    EditorWindow builderWindow;
+    public EditorWindow builderWindow;
     PropertyInfo selectionProp;
     PropertyInfo visualTreeAssetProp;
     VisualElement prevSelection;

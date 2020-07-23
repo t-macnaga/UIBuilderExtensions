@@ -4,35 +4,42 @@ using UnityEngine.UIElements;
 using System.Linq;
 using System.Collections.Generic;
 
-public class UICodeBuilder : EditorWindow
+[InitializeOnLoad]
+public class BuilderExtensions
 {
-    EditorWindowCodeBuilder editorWindowCodeBuilder;
-    ScrollView scrollView;
-    BuilderWindowInternal internalBuilder;
-    string ClassName => internalBuilder.TreeAsset.name;
-    string Path => AssetDatabase.GetAssetPath(internalBuilder.TreeAsset);
-    VisualElement CurrentSelection => internalBuilder.CurrentSelection;
-
-    [MenuItem("Window/UI/UI Code Builder")]
-    static void Init()
+    static EditorWindowCodeBuilder editorWindowCodeBuilder;
+    static ScrollView scrollView;
+    static BuilderWindowInternal internalBuilder;
+    static VisualElement builderInspector;
+    static VisualElement BuilderInspector
     {
-        GetWindow<UICodeBuilder>();
+        get
+        {
+            if (builderInspector == null)
+            {
+                builderInspector = internalBuilder.builderWindow.rootVisualElement.Q("inspector");
+            }
+            return builderInspector;
+        }
     }
+    static string Path => AssetDatabase.GetAssetPath(internalBuilder.TreeAsset);
+    static string ClassName => System.IO.Path.GetFileNameWithoutExtension(Path);
+    static VisualElement CurrentSelection => internalBuilder.CurrentSelection;
 
-    void OnEnable()
+    static BuilderExtensions()
     {
         internalBuilder = new BuilderWindowInternal();
         internalBuilder.OnSelectionChanged = OnSelectVisualElement;
-        rootVisualElement.schedule.Execute(_ => internalBuilder.Update()).Every(1000);
+        EditorApplication.update += internalBuilder.Update;
     }
 
-    void OnSelectVisualElement(VisualElement e)
+    static void OnSelectVisualElement(VisualElement e)
     {
         editorWindowCodeBuilder = new EditorWindowCodeBuilder(Path);
         BuildEventView(e);
     }
 
-    void BuildEventView(VisualElement e)
+    static void BuildEventView(VisualElement e)
     {
         if (scrollView == null)
         {
@@ -46,12 +53,13 @@ public class UICodeBuilder : EditorWindow
         if (e is Button)
         {
             types = new List<CodeGenDescription> { new CodeGenDescription(e) };
+            AddDescGroup(types, scrollView, "Button Event", true);
         }
         else if (e is INotifyValueChanged<string>)
         {
             Debug.Log("string value changed.");
-            // types = TypeCache.GetTypesDerivedFrom<INotifyValueChanged<string>>();
             types = new List<CodeGenDescription> { new CodeGenDescription(e) };
+            AddDescGroup(types, scrollView, "Value Change Event", true);
         }
         else if (e is INotifyValueChanged<bool>)
         {
@@ -62,14 +70,7 @@ public class UICodeBuilder : EditorWindow
             //     nameof(ChangeEvent<bool>)// "ChangeEvent<string>"
             // };
         }
-        // else
-        // {
-        //     types = TypeCache.GetTypesDerivedFrom<EventBase>()
-        //     .Where(x => !x.IsAbstract)
-        //     .Select(x => new CodeGenDescription(x))// Type = x, EventTypeName = x.Name })
-        //     .OrderBy(x => x.Type.Name)
-        //     .ToList();
-        // }
+        types.Clear();
         foreach (var type in
             TypeCache.GetTypesDerivedFrom<EventBase>()
             .Where(x => !x.IsAbstract)
@@ -78,9 +79,23 @@ public class UICodeBuilder : EditorWindow
         {
             types.Add(type);
         }
-        foreach (var type in types)
+        AddDescGroup(types, scrollView, "All Events", false);
+        // rootVisualElement.Add(scrollView);
+        BuilderInspector.Add(scrollView);
+    }
+
+    static void AddDescGroup(List<CodeGenDescription> descList, VisualElement elementAddTo, string groupLabel, bool open)
+    {
+        var group = new Foldout();
+        var savedColor = GUI.backgroundColor;
+        group.style.backgroundColor = Color.gray;
+        group.value = open;
+        group.text = groupLabel;
+        foreach (var type in descList)
         {
             var field = new TextField(type.DisplayEventTypeName);
+            field.style.backgroundColor = savedColor;
+            field.isReadOnly = true;
             field.value = editorWindowCodeBuilder.ContainsCallback(type.CallbackMethodName) ?
             type.CallbackMethodName : string.Empty;
 
@@ -92,19 +107,19 @@ public class UICodeBuilder : EditorWindow
                 GenerateCode(type);
             });
             field.AddManipulator(doubleClickManipulator);
-            scrollView.Add(field);
+            group.Add(field);
         }
-        rootVisualElement.Add(scrollView);
+        elementAddTo.Add(group);
     }
 
-    void SaveWindowScript(string assetPath, string script)
+    static void SaveWindowScript(string assetPath, string script)
     {
         var ioPath = Application.dataPath.Replace("Assets", "") + assetPath;
         System.IO.File.WriteAllText(ioPath, script);
         AssetDatabase.Refresh();
     }
 
-    void GenerateCode(CodeGenDescription desc)
+    static void GenerateCode(CodeGenDescription desc)
     {
         var treeAssetPath = Path;
         editorWindowCodeBuilder.Save(ClassName);

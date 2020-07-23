@@ -1,12 +1,4 @@
 ﻿using System.Text;
-using System;
-using UnityEngine.UIElements;
-using System.Reflection;
-using System.Text;
-using System.Linq;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
 
 public static class EditorWindowCodeGen
 {
