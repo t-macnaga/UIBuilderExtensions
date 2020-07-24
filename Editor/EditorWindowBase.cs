@@ -9,7 +9,6 @@ using System.Reflection;
 public abstract partial class EditorWindowBase : EditorWindow
 {
     protected abstract string TreeAssetPath { get; }
-    BindingFlags BindingFlag = BindingFlags.NonPublic | BindingFlags.Instance;
 
     protected void InitializeComponents()
     {

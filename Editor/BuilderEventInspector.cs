@@ -1,96 +1,90 @@
-﻿using UnityEngine;
-using UnityEditor;
+﻿using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 
-[InitializeOnLoad]
-public class BuilderExtensions
+internal class BuilderEventInspector
 {
-    static EditorWindowCodeBuilder editorWindowCodeBuilder;
-    static ScrollView scrollView;
-    static BuilderWindowInternal internalBuilder;
-    static VisualElement builderInspector;
-    static VisualElement BuilderInspector
-    {
-        get
-        {
-            if (builderInspector == null)
-            {
-                builderInspector = internalBuilder.builderWindow.rootVisualElement.Q("inspector");
-            }
-            return builderInspector;
-        }
-    }
-    static string Path => AssetDatabase.GetAssetPath(internalBuilder.TreeAsset);
-    static string ClassName => System.IO.Path.GetFileNameWithoutExtension(Path);
-    static VisualElement CurrentSelection => internalBuilder.CurrentSelection;
+    static readonly string BuilderEventInspectorName = "BuilderEventInspector";
+    EditorWindowCodeBuilder editorWindowCodeBuilder;
+    ScrollView scrollView;
+    BuilderWindowInternal internalBuilder;
+    string Path => AssetDatabase.GetAssetPath(internalBuilder.TreeAsset);
+    string ClassName => System.IO.Path.GetFileNameWithoutExtension(Path);
+    VisualElement CurrentSelection => internalBuilder.CurrentSelection;
 
-    static BuilderExtensions()
+    internal BuilderEventInspector(BuilderWindowInternal internalBuilder)
     {
-        internalBuilder = new BuilderWindowInternal();
-        internalBuilder.OnSelectionChanged = OnSelectVisualElement;
-        EditorApplication.update += internalBuilder.Update;
+        this.internalBuilder = internalBuilder;
     }
 
-    static void OnSelectVisualElement(VisualElement e)
+    public void OnSelectVisualElement(VisualElement e)
     {
         editorWindowCodeBuilder = new EditorWindowCodeBuilder(Path);
         BuildEventView(e);
     }
 
-    static void BuildEventView(VisualElement e)
+    void BuildEventView(VisualElement e)
     {
         if (scrollView == null)
         {
             scrollView = new ScrollView();
+            scrollView.name = BuilderEventInspectorName;
         }
         scrollView.Clear();
         if (e == null) { return; }
-
-        scrollView.SetEnabled(!string.IsNullOrEmpty(e.name));
         var types = new List<CodeGenDescription>();
         if (e is Button)
         {
             types = new List<CodeGenDescription> { new CodeGenDescription(e) };
-            AddDescGroup(types, scrollView, "Button Event", true);
         }
         else if (e is INotifyValueChanged<string>)
         {
-            Debug.Log("string value changed.");
             types = new List<CodeGenDescription> { new CodeGenDescription(e) };
-            AddDescGroup(types, scrollView, "Value Change Event", true);
         }
         else if (e is INotifyValueChanged<bool>)
         {
-            Debug.Log("bool value changed.");
-            // types = TypeCache.GetTypesDerivedFrom<INotifyValueChanged<string>>();
-            // types = new List<string>
-            // {
-            //     nameof(ChangeEvent<bool>)// "ChangeEvent<string>"
-            // };
+            types = new List<CodeGenDescription> { new CodeGenDescription(e) };
         }
-        types.Clear();
+        else if (e is INotifyValueChanged<int>)
+        {
+            types = new List<CodeGenDescription> { new CodeGenDescription(e) };
+        }
+        else if (e is INotifyValueChanged<float>)
+        {
+            types = new List<CodeGenDescription> { new CodeGenDescription(e) };
+        }
         foreach (var type in
             TypeCache.GetTypesDerivedFrom<EventBase>()
-            .Where(x => !x.IsAbstract)
+            .Where(x => !x.IsAbstract && !x.IsGenericType)
             .Select(x => new CodeGenDescription(x, e.name))
             .OrderBy(x => x.Type.Name))
         {
             types.Add(type);
         }
-        AddDescGroup(types, scrollView, "All Events", false);
-        // rootVisualElement.Add(scrollView);
-        BuilderInspector.Add(scrollView);
+        AddDescGroup(types, scrollView, "Events", false, e);
+        var view = internalBuilder.BuilderInspector.Q<ScrollView>(BuilderEventInspectorName);
+        if (view == null)
+        {
+            internalBuilder.BuilderInspector.Add(scrollView);
+        }
     }
 
-    static void AddDescGroup(List<CodeGenDescription> descList, VisualElement elementAddTo, string groupLabel, bool open)
+    void AddDescGroup(
+        List<CodeGenDescription> descList,
+        VisualElement elementAddTo,
+        string groupLabel,
+        bool open,
+        VisualElement targetElement)
     {
         var group = new Foldout();
         var savedColor = GUI.backgroundColor;
         group.style.backgroundColor = Color.gray;
         group.value = open;
         group.text = groupLabel;
+
+        var eventFields = new VisualElement();
         foreach (var type in descList)
         {
             var field = new TextField(type.DisplayEventTypeName);
@@ -102,24 +96,37 @@ public class BuilderExtensions
             var doubleClickManipulator = new MouseDoubleClickManipulator()
             .RegisterDoubleClick(() =>
             {
-                Debug.Log($"Double Button Clicked.");
                 field.value = type.CallbackMethodName;
                 GenerateCode(type);
             });
             field.AddManipulator(doubleClickManipulator);
-            group.Add(field);
+            eventFields.Add(field);
         }
+        group.Add(eventFields);
+        var warnLabel = new Label("Set the VisualElement name.");
+        warnLabel.visible = false;
+        group.Add(warnLabel);
+
+        group.schedule.Execute(_ =>
+        {
+            var isEnabled = !string.IsNullOrEmpty(targetElement.name);
+            scrollView.SetEnabled(isEnabled);
+            eventFields.visible = isEnabled;
+            warnLabel.visible = !isEnabled;
+
+        }).Every(100);
+
         elementAddTo.Add(group);
     }
 
-    static void SaveWindowScript(string assetPath, string script)
+    void SaveWindowScript(string assetPath, string script)
     {
         var ioPath = Application.dataPath.Replace("Assets", "") + assetPath;
         System.IO.File.WriteAllText(ioPath, script);
         AssetDatabase.Refresh();
     }
 
-    static void GenerateCode(CodeGenDescription desc)
+    void GenerateCode(CodeGenDescription desc)
     {
         var treeAssetPath = Path;
         editorWindowCodeBuilder.Save(ClassName);
@@ -144,7 +151,7 @@ public class BuilderExtensions
         }
         if (!registerWindowScript.text.Contains(stubCode))
         {
-            Debug.Log($"Not Contains {stubCode}");
+            Debug.Log($"Add Method {stubCode}");
             var script = EditorWindowCodeGen.GetStubbedCodeAtSecondLastIndexOfBlacket(registerWindowScript.text, stubCode);
             SaveWindowScript(windowRegisterFilePath, script);
         }

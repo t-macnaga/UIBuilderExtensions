@@ -1,0 +1,14 @@
+{
+    "name": "com.t-macnaga.ui-builder-extensions",
+    "displayName": "UI Builder Extensions",
+    "version": "0.1.0-preview.0",
+    "unity": "2019.4",
+    "description": "ui builder extensions package",
+    "keywords": [
+        "ui builder"
+    ],
+    "category": "ui builder",
+    "dependencies": {
+        "com.unity.ui.builder": "1.0.0-preview.1"
+    }
+}

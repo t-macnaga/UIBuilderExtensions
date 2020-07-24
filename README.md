@@ -1,29 +1,16 @@
-# README #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+# Unity UI Builder Extensions
 
-### What is this repository for? ###
+![UIBuilderExtensions](https://user-images.githubusercontent.com/8216996/88447895-31c86900-ce73-11ea-9809-73a3c26bd2b8.gif)
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+# Requirements
 
-### How do I get set up? ###
+* Unity 2019.4 or later
+* UI Builder
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+# What is this?
 
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+* Editor C# Code Generation
+If you open Events, you can use the following methods: OnClick for Buttons, OnValueChanged for TextField and Toggle, and so on.
+In the event list, double-click on the callback you want to add, and you'll see the
+Create C# EditorWindow code at the same level as the UXML

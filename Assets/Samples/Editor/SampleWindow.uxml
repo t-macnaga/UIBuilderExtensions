@@ -1,10 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:Button text="Button1" name="button1" focusable="true" style="height: 68px; width: 91px;" />
-    <uie:Vector3Field label="Vec3 Field" style="height: 26px;" />
-    <ui:Label text="Label" style="height: 31px;" />
-    <ui:Toggle label="Toggle" style="height: 30px;" />
-    <ui:Slider picking-mode="Ignore" label="Slider" value="42" high-value="100" style="height: 28px;" />
-    <ui:TextField picking-mode="Ignore" label="Text Field" value="filler text" text="filler text" name="textField" style="height: 16px;" />
-    <ui:Button text="Button1" name="button2" focusable="true" style="height: 68px; width: 91px;" />
-    <ui:VisualElement name="visualElement" style="background-color: rgba(255, 0, 0, 255); height: 35.8px; width: 51.6px;" />
-</ui:UXML>

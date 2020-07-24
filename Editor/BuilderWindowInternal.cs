@@ -1,20 +1,9 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
-public static class InternalUtility
-{
-    public static void OpenFileOnSpecificLineAndColumn(string filePath, int line, int column)
-    {
-        Assembly.GetAssembly(typeof(EditorApplication))
-        .GetType("UnityEditor.LogEntries")
-        .GetMethod(nameof(OpenFileOnSpecificLineAndColumn), BindingFlags.Static | BindingFlags.Public)
-        .Invoke(null, new object[] { filePath, line, column });
-    }
-}
 
 internal class BuilderWindowInternal
 {
@@ -24,15 +13,31 @@ internal class BuilderWindowInternal
     VisualElement prevSelection;
     object builderSelection;
     object builderDocument;
+    VisualElement builderInspector;
     public VisualTreeAsset TreeAsset => visualTreeAssetProp.GetValue(builderDocument) as VisualTreeAsset;
     IEnumerable<VisualElement> Selections => selectionProp.GetValue(builderSelection) as IEnumerable<VisualElement>;
     public System.Action<VisualElement> OnSelectionChanged { get; set; }
     public VisualElement CurrentSelection { get; private set; }
+    public VisualElement BuilderInspector
+    {
+        get
+        {
+            if (builderInspector == null)
+            {
+                builderInspector = builderWindow.rootVisualElement.Q("inspector");
+            }
+            return builderInspector;
+        }
+    }
 
     public void Update()
     {
         InitializeIfNeeded();
-        if (builderWindow == null) { return; }
+        if (builderWindow == null)
+        {
+            builderInspector = null;
+            return;
+        }
         CurrentSelection = Selections.FirstOrDefault();
         if (prevSelection != CurrentSelection)
         {
